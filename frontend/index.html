@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sistema de Clientes</title>
+</head>
+<body>
+
+    <!-- LOGIN -->
+    <div id="login">
+        <h2>Login</h2>
+        <input id="email" placeholder="Email">
+        <input id="senha" placeholder="Senha" type="password">
+        <button onclick="login()">Entrar</button>
+    </div>
+
+    <!-- MENU -->
+    <div id="menu" style="display:none;">
+        <h2>Menu</h2>
+        <button onclick="mostrarTela('cadastro')">Cadastrar Cliente</button>
+        <button onclick="mostrarTela('listar')">Ver Clientes</button>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="cadastro" style="display:none;">
+        <h3>Cadastrar Cliente</h3>
+        <input id="nomeCadastro" placeholder="Nome">
+        <input id="emailCadastro" placeholder="Email">
+        <input id="cpfCadastro" placeholder="CPF">
+        <button onclick="criarCliente()">Cadastrar</button>
+        <button onclick="voltarMenu()">Voltar</button>
+    </div>
+
+    <!-- LISTAR -->
+    <div id="listar" style="display:none;">
+        <h3>Lista de Clientes</h3>
+        <ul id="lista"></ul>
+        <input id="buscarId" placeholder="Digite o ID">
+        <button onclick="buscarCliente()">Buscar</button>
+        <button onclick="carregarClientes()">Mostrar todos</button>
+        <button onclick="voltarMenu()">Voltar</button>
+    </div>
+
+<script>
+const API = "http://127.0.0.1:8000/clientes"
+
+// LOGIN (simples por enquanto)
+function login() {
+    document.getElementById("login").style.display = "none"
+    document.getElementById("menu").style.display = "block"
+}
+
+// NAVEGAÇÃO
+function mostrarTela(tela) {
+    document.getElementById("menu").style.display = "none"
+    document.getElementById("cadastro").style.display = "none"
+    document.getElementById("listar").style.display = "none"
+
+    document.getElementById(tela).style.display = "block"
+
+    if (tela === "listar") {
+        carregarClientes()
+    }
+}
+
+function voltarMenu() {
+    document.getElementById("cadastro").style.display = "none"
+    document.getElementById("listar").style.display = "none"
+    document.getElementById("menu").style.display = "block"
+}
+
+// CRIAR CLIENTE
+async function criarCliente() {
+    const nome = document.getElementById("nomeCadastro").value
+    const email = document.getElementById("emailCadastro").value
+    const cpf = document.getElementById("cpfCadastro").value
+
+    try {
+        const res = await fetch(API, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({nome, email, cpf})
+        })
+
+        if (!res.ok) {
+            throw new Error("Erro ao cadastrar")
+        }
+
+        alert("Cliente cadastrado com sucesso!")
+        document.getElementById("nomeCadastro").value = ""
+        document.getElementById("emailCadastro").value = ""
+        document.getElementById("cpfCadastro").value = ""
+
+    } catch (err) {
+        console.error(err)
+        alert("Erro ao cadastrar cliente")
+    }
+}
+
+// LISTAR CLIENTES
+async function carregarClientes() {
+    try {
+        const res = await fetch(API)
+
+        if (!res.ok) {
+            throw new Error("Erro ao buscar clientes")
+        }
+
+        const clientes = await res.json()
+
+        const lista = document.getElementById("lista")
+        lista.innerHTML = ""
+
+        clientes.forEach(c => {
+            const li = document.createElement("li")
+
+            li.innerHTML = `
+                ${c.nome} - ${c.email}
+                <button onclick="deletar(${c.id})">Excluir</button>
+                <button onclick="editar(${c.id}, '${c.nome}', '${c.email}', '${c.cpf}')">Editar</button>
+            `
+
+            lista.appendChild(li)
+        })
+
+    } catch (err) {
+        console.error("Erro:", err)
+        alert("Erro ao carregar clientes")
+    }
+}
+
+//Buscar por id
+async function buscarCliente() {
+    const id = document.getElementById("buscarId").value
+
+    if (!id) {
+        alert("Digite um ID")
+        return
+    }
+
+    try {
+        const res = await fetch(API + "/" + id)
+
+        if (!res.ok) {
+            throw new Error("Cliente não encontrado")
+        }
+
+        const cliente = await res.json()
+
+        const lista = document.getElementById("lista")
+        lista.innerHTML = ""
+
+        const li = document.createElement("li")
+
+        li.innerHTML = `
+            ${cliente.nome} - ${cliente.email}
+            <button onclick="deletar(${cliente.id})">Excluir</button>
+            <button onclick="editar(${cliente.id}, '${cliente.nome}', '${cliente.email}', '${cliente.cpf}')">Editar</button>
+        `
+
+        lista.appendChild(li)
+
+    } catch (err) {
+        alert("Cliente não encontrado")
+    }
+}
+
+// DELETAR
+async function deletar(id) {
+    await fetch(API + "/" + id, {
+        method: "DELETE"
+    })
+
+    carregarClientes()
+}
+
+// EDITAR
+function editar(id, nome, email, cpf) {
+    const novoNome = prompt("Novo nome:", nome)
+    const novoEmail = prompt("Novo email:", email)
+    const novoCpf = prompt("Novo CPF:", cpf)
+
+    fetch(API + "/" + id, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            nome: novoNome,
+            email: novoEmail,
+            cpf: novoCpf
+        })
+    }).then(() => carregarClientes())
+}
+</script>
+
+</body>
+</html>
