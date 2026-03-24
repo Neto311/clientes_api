@@ -13,7 +13,7 @@ pwd_context = CryptContext(
 )
 
 
-SECRET_KEY = "sdjkvnd-dshfnv-ndehj35-#fhsk "
+SECRET_KEY = "sdjkvnd-dshfnv-ndehj35-#fhsk " #Chave ficticia, para teste do projeto, verdadeira chave encontra-se segura
 ALGORITHM = "HS256"
 ACESS_TOKEN_EXPIRE_MINUTES = 30
 
