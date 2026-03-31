@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 from database import get_db
 from typing import List
-from utils.auth import hash_senha, criar_token, verificar_senha
+from utils.auth import hash_senha, criar_token, verificar_senha, get_current_user
 
 router_user = APIRouter()
+
+ADMIN_EMAIL = "oncelottti.mkt@gmail.com"  # 👈 COLOQUE SEU EMAIL
 
 @router_user.post("/register", response_model = UsuarioResponse)
 def registrar(usuario: UsuarioCreate, db: Session = Depends(get_db)):
@@ -42,3 +44,70 @@ def login(usuario_login: UsuarioLogin, db: Session = Depends(get_db)):
     access_token = criar_token(data = {"sub": usuario.email})
 
     return {"access_token": access_token, "token_type":"bearer"}
+
+
+@router_user.get("/users")
+def listar_usuarios(
+    current_user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Lista todos os usuários registrados.
+    Apenas o admin pode acessar.
+    """
+    
+    # Verifica se é admin
+    if current_user != ADMIN_EMAIL:
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso negado. Apenas administrador pode acessar."
+        )
+    
+    # Busca todos os usuários
+    usuarios = db.query(model.Usuario).all()
+    
+    # Retorna os dados formatados
+    return [
+        {
+            "id": usuario.id,
+            "nome": usuario.nome,
+            "email": usuario.email,
+            "cpf_cnpj": usuario.cpf_cnpj,
+            "data_criacao": usuario.criado_em.isoformat() if usuario.criado_em else None
+        }
+        for usuario in usuarios
+    ]
+
+
+@router_user.delete("/users/{user_id}")
+def deletar_usuario(
+    user_id: int,
+    current_user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Deleta um usuário.
+    Apenas o admin pode acessar.
+    """
+    
+    # Verifica se é admin
+    if current_user != ADMIN_EMAIL:
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso negado. Apenas administrador pode deletar usuários."
+        )
+    
+    # Busca o usuário
+    usuario = db.query(model.Usuario).filter(model.Usuario.id == user_id).first()
+    
+    if not usuario:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuário não encontrado"
+        )
+    
+    # Deleta o usuário
+    db.delete(usuario)
+    db.commit()
+    
+    return {"mensagem": f"Usuário {usuario.nome} deletado com sucesso"}
