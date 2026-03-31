@@ -29,3 +29,13 @@ wheels/
 *.swo
 *~
 .DS_Store
+# --- security / local only ---
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# local db
+clientes.db
